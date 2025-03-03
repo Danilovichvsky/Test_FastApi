@@ -26,7 +26,8 @@ class CreditInfo(BaseModel):
     total_interest_payments: float = None
 
 
-@app.get("/user_credits/{user_id}", response_model=list[CreditInfo])
+@app.get("/user_credits/{user_id}", response_model=list[CreditInfo],
+         tags=["Інформація про кредит"])
 async def get_user_credits_info(user_id: int):
     async with get_async_session() as session:  # Використовуємо асинхронний контекст
         result = await session.execute(
@@ -82,7 +83,7 @@ async def get_user_credits_info(user_id: int):
         return credit_info
 
 
-@app.post("/plans_insert")
+@app.post("/plans_insert",tags=["Додавання плану"])
 async def insert_plans(file: UploadFile = File(...), db: AsyncSession = Depends(get_async_session)):
     # Зчитуємо файл Excel
     try:
