@@ -8,7 +8,6 @@ from db_connection import get_async_session
 from datetime import datetime
 import pandas as pd
 
-# Ініціалізація FastAPI додатку
 app = FastAPI()
 
 
@@ -83,26 +82,22 @@ async def get_user_credits_info(user_id: int):
         return credit_info
 
 
-@app.post("/plans_insert",tags=["Додавання плану"])
+@app.post("/plans_insert", tags=["Додавання плану"])
 async def insert_plans(file: UploadFile = File(...), db: AsyncSession = Depends(get_async_session)):
-    # Зчитуємо файл Excel
     try:
         df = pd.read_excel(file.file)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Не вдалося прочитати файл Excel: {str(e)}")
 
-    # Перевіряємо наявність необхідних колонок у файлі
     required_columns = ['period', 'category_id', 'sum']
     if not all(col in df.columns for col in required_columns):
         raise HTTPException(status_code=400, detail="Файл має містити стовпці: 'period', 'category_id', 'sum'")
 
-    # Перевірка на правильність формату місяця (period)
     df['period'] = pd.to_datetime(df['period'], errors='coerce', format='%d.%m.%Y')
     if df['period'].isnull().any():
         raise HTTPException(status_code=400,
                             detail="Невірний формат місяця. Має бути перше число місяця у форматі dd.mm.yyyy.")
 
-    # Перевірка на порожні значення у стовпці sum
     if df['sum'].isnull().any():
         raise HTTPException(status_code=400, detail="Стовпець 'sum' не може містити порожніх значень.")
 
@@ -124,13 +119,11 @@ async def insert_plans(file: UploadFile = File(...), db: AsyncSession = Depends(
             raise HTTPException(status_code=400,
                                 detail=f"План для місяця {period} та категорії з ID {category_id} вже існує.")
 
-    # Якщо всі перевірки пройдено, додаємо нові плани
     for index, row in df.iterrows():
         period = row['period'].strftime('%Y-%m-%d')  # Перетворюємо на рік-місяць-день
         category_id = row['category_id']
         amount = row['sum']
 
-        # Вставка нового плану в базу даних
         await db.execute(
             text("""
                 INSERT INTO plans (period, sum, category_id)
@@ -138,7 +131,6 @@ async def insert_plans(file: UploadFile = File(...), db: AsyncSession = Depends(
             """), {"period": period, "sum": amount, "category_id": category_id}
         )
 
-    # Підтверджуємо транзакцію
     await db.commit()
 
     return {"message": "Плани успішно завантажено та внесено в базу даних."}
